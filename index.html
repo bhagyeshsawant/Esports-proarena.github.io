@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProArena Esports</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+body {
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#0a0a1a;
+    color:white;
+}
+
+.container {
+    max-width:1100px;
+    margin:auto;
+    padding:20px;
+}
+
+header {
+    background:#151530;
+    padding:15px;
+    border-bottom:2px solid #ff4655;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.logo {
+    color:#ff4655;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.btn {
+    padding:10px 18px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.btn-google { background:white; color:black; }
+.btn-admin { background:#00e0ff; color:black; }
+
+.card {
+    background:#1a1a35;
+    padding:20px;
+    margin:20px 0;
+    border-radius:10px;
+}
+
+table {
+    width:100%;
+    border-collapse:collapse;
+}
+
+th, td {
+    padding:12px;
+    border-bottom:1px solid #333;
+}
+
+th { color:#ff4655; }
+
+input {
+    width:100%;
+    padding:12px;
+    margin:8px 0;
+    background:#0a0a1a;
+    border:1px solid #333;
+    color:white;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<div class="logo">PROARENA ESPORTS</div>
+<div>
+<button id="loginBtn" class="btn btn-google" onclick="googleLogin()">Login with Google</button>
+<button id="adminBtn" class="btn btn-admin" style="display:none;" onclick="toggleAdmin()">Admin Panel</button>
+</div>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h1>BGMI & FREE FIRE TOURNAMENTS</h1>
+<p>Register and compete for prizes.</p>
+</div>
+
+<div class="card">
+<h2>Registration Form</h2>
+<iframe src="https://docs.google.com/forms/d/e/1FAIpQLSej8HMeykMnUAWZl3O6cAYJ-Xpl9fva7aKwACpREstlJHGrPQ/viewform?embedded=true"
+width="100%" height="900" frameborder="0"></iframe>
+</div>
+
+<div class="card">
+<h2>Payment</h2>
+<p>Send entry to:</p>
+<h3>govindsawant1975-4@oksbi</h3>
+
+<p>Contact after payment:</p>
+<p>+91 9511843840</p>
+<p>+91 9881733570</p>
+<p>+91 8329783023</p>
+</div>
+
+<div class="card">
+<h2>Registered Teams</h2>
+<table>
+<thead>
+<tr>
+<th>Team</th>
+<th>Player 1</th>
+<th>Player 2</th>
+<th>Player 3</th>
+<th>Player 4</th>
+</tr>
+</thead>
+<tbody id="teamTable">
+<tr><td colspan="5">Loading...</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="card" id="adminPanel" style="display:none;">
+<h2>Admin Panel</h2>
+
+<input id="teamName" placeholder="Team Name">
+<input id="p1" placeholder="Player 1">
+<input id="p2" placeholder="Player 2">
+<input id="p3" placeholder="Player 3">
+<input id="p4" placeholder="Player 4">
+
+<button class="btn" style="background:#00ff88;color:black;width:100%;" onclick="addTeam()">Add Team</button>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig = {
+apiKey: "AIzaSyCjxCgZWsqnIEMaCSCu7ZJykpAFGnX0kFY",
+authDomain: "esports-konkan.firebaseapp.com",
+databaseURL: "https://esports-konkan-default-rtdb.firebaseio.com",
+projectId: "esports-konkan",
+storageBucket: "esports-konkan.firebasestorage.app",
+messagingSenderId: "924344762740",
+appId: "1:924344762740:web:11f8d5b158ee0dad096c21"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const ADMIN_EMAIL = "sawantbhagyesh98@gmail.com";
+let currentUser = null;
+
+auth.onAuthStateChanged(user=>{
+    currentUser = user;
+    if(user){
+        document.getElementById("loginBtn").style.display="none";
+        if(user.email===ADMIN_EMAIL){
+            document.getElementById("adminBtn").style.display="inline-block";
+        }
+    }
+});
+
+function googleLogin(){
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+}
+
+function toggleAdmin(){
+    const panel=document.getElementById("adminPanel");
+    panel.style.display = panel.style.display==="none" ? "block":"none";
+}
+
+function addTeam(){
+    if(!currentUser || currentUser.email!==ADMIN_EMAIL){
+        alert("Admin only");
+        return;
+    }
+
+    const team={
+        team:teamName.value,
+        p1:p1.value,
+        p2:p2.value,
+        p3:p3.value,
+        p4:p4.value,
+        time:Date.now()
+    };
+
+    db.ref("teams").push(team);
+}
+
+function loadTeams(){
+    db.ref("teams").on("value",snap=>{
+        const table=document.getElementById("teamTable");
+        table.innerHTML="";
+
+        if(snap.exists()){
+            snap.forEach(child=>{
+                const t=child.val();
+                const row=document.createElement("tr");
+                row.innerHTML=`
+                <td>${t.team}</td>
+                <td>${t.p1}</td>
+                <td>${t.p2}</td>
+                <td>${t.p3}</td>
+                <td>${t.p4}</td>
+                `;
+                table.appendChild(row);
+            });
+        } else {
+            table.innerHTML="<tr><td colspan='5'>No teams yet</td></tr>";
+        }
+    });
+}
+
+loadTeams();
+</script>
+
+</body>
+</html>
